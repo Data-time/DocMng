@@ -1,0 +1,376 @@
+﻿{
+ 'Реквизиты': {
+  'Код': '000000022',
+  'Наименование': 'Контроль - Указание трудозатрат',
+  'ТекстОбработки': '//-------------------------------------------------------------------- 
+//Параметры
+//-------------------------------------------------------------------- 
+Отладка = Ложь;
+ДатаНачалаСбора = НачалоДня(ТекущаяДата()); //с начала дня
+Если ДеньНедели(ДатаНачалаСбора) = 1 Тогда     //если это пн, то включаем выходные
+	ДатаНачалаСбора = ДатаНачалаСбора - 86400*2;
+КонецЕсли;
+
+ТемаСообщения = "Трудозартаты с "+Формат(ДатаНачалаСбора,"ДФ=dd.MM.yyyy");  
+ПочтаПолучателей = "ssmirnov@t-medica.com; NNeusypova@t-medica.com; SKryukov@data-time.ru; ANovikov@t-medica.com";
+Если Отладка Тогда 
+   	ПочтаПолучателей = "ssmirnov@t-medica.com";
+КонецЕсли; 
+		  
+ГуидУчетнойЗаписиПочты = "567e3146-123f-11ed-a12c-ef295ee2b5a3"; //системная
+	 
+    	
+СимволПереносаСтроки = Символы.ПС + Символы.ВК;
+ТекстСообщения = "Файл во вложении";
+		
+		
+ 
+ТЗ = новый ТаблицаЗначений;   
+ТЗ.Колонки.Добавить("Сотрудник",Новый ОписаниеТипов("Строка",,Новый КвалификаторыСтроки(72)));
+ТЗ.Колонки.Добавить("Трудозатраты",Новый ОписаниеТипов("Число",,));
+ТЗ.Колонки.Добавить("ДатаТрудозатрат",Новый ОписаниеТипов("Дата",,));  
+ТЗ.Колонки.Добавить("Комментарий",Новый ОписаниеТипов("Строка",,Новый КвалификаторыСтроки(1024))); 
+ТЗ.Колонки.Добавить("НомерЗадачи",Новый ОписаниеТипов("Строка",,Новый КвалификаторыСтроки(50)));
+ТЗ.Колонки.Добавить("ТемаЗадачи",Новый ОписаниеТипов("Строка",,Новый КвалификаторыСтроки(100)));
+
+//-------------------------------------------------------------------- 
+//Вычисляемые параметры
+//--------------------------------------------------------------------
+ТекстXMLСКД = ПолучитьЗначениеПеременной(Переменные,"ТекстXMLСКД");
+Чтение = Новый ЧтениеXML;
+НовыйСXDTO = Новый СериализаторXDTO(ФабрикаXDTO);  
+Чтение.УстановитьСтроку(ТекстXMLСКД); //xml с настройками СКД в тексте  
+СКД = НовыйСXDTO.ПрочитатьXML(Чтение);
+
+//-------------------------------------------------------------------- 
+//Запрос - получение журнала работ
+//--------------------------------------------------------------------
+ТекстЗапроса = ПолучитьЗначениеПеременной(Переменные,"ТекстЗапроса");  
+ДатаСтрокаSQL = "\u0027"+Формат(ДатаНачалаСбора,"ДФ=\u0027ггггММдд ЧЧ:мм:сс:000\u0027; ДП=00010101")+"\u0027";
+ТекстЗапроса = СтрЗаменить(ТекстЗапроса,"&ДатаС",ДатаСтрокаSQL);
+ 
+RecordSet = Соединение.Execute(ТекстЗапроса);
+Пока RecordSet.EOF() = Ложь Цикл     
+			
+	НовСтр = ТЗ.Добавить(); 
+	 
+	НовСтр.Сотрудник = RecordSet.Fields("EmployeeName").Value;
+	НовСтр.Трудозатраты = RecordSet.Fields("timeM").Value;
+	НовСтр.ДатаТрудозатрат = RecordSet.Fields("started").Value;
+	НовСтр.Комментарий = RecordSet.Fields("comment").Value;
+	НовСтр.НомерЗадачи = RecordSet.Fields("IssueNumber").Value;
+	НовСтр.ТемаЗадачи = RecordSet.Fields("IssueSubject").Value;
+					
+	RecordSet.MoveNext();	
+КонецЦикла;  
+
+//-------------------------------------------------------------------- 
+//СКД
+//--------------------------------------------------------------------
+ВнешниеНаборыДанных = Новый Структура;
+ВнешниеНаборыДанных.Вставить("ТЗ", ТЗ);
+	
+ТДРезультат = Новый ТабличныйДокумент;		
+	
+//Получить инициализированные настройки	
+КомпоновщикНастроек = новый КомпоновщикНастроекКомпоновкиДанных;
+КомпоновщикНастроек.Инициализировать(новый ИсточникДоступныхНастроекКомпоновкиДанных(СКД)); 
+КомпоновщикНастроек.ЗагрузитьНастройки(СКД.НастройкиПоУмолчанию);
+НастройкиКомпоновки = КомпоновщикНастроек.ПолучитьНастройки();
+	
+КомпоновщикМакета = Новый КомпоновщикМакетаКомпоновкиДанных;
+МакетКомпоновкиДанных = КомпоновщикМакета.Выполнить(СКД,НастройкиКомпоновки, , ,Тип("ГенераторМакетаКомпоновкиДанных"));
+ПроцессорКомпоновкиДанных = Новый ПроцессорКомпоновкиДанных;
+ПроцессорКомпоновкиДанных.Инициализировать(МакетКомпоновкиДанных,ВнешниеНаборыДанных);
+	
+ПроцессорВывода = Новый ПроцессорВыводаРезультатаКомпоновкиДанныхВТабличныйДокумент;
+ТДРезультат = ПроцессорВывода.Вывести(ПроцессорКомпоновкиДанных);
+
+//-------------------------------------------------------------------- 
+//Отправка письма
+//--------------------------------------------------------------------
+	
+Вложения = новый Массив; 
+////как вложение
+//ПотокФайла = Новый ПотокВПамяти();
+//ТДРезультат.Записать(ПотокФайла,ТипФайлаТабличногоДокумента.XLSX);
+//ДвоичныеДанныеФайла = ПотокФайла.ЗакрытьИПолучитьДвоичныеДанные();
+//Вложения.Добавить(Новый структура("Представление,АдресВоВременномХранилище",ТемаСообщения+".xlsx",ДвоичныеДанныеФайла));
+ 
+//в тело письма HTMLТекстОтчета
+ИмяВременногоФайла = ПолучитьИмяВременногоФайла("html");
+ТДРезультат.Записать(ИмяВременногоФайла, ТипФайлаТабличногоДокумента.HTML);
+ЧтениеТекста = Новый ЧтениеТекста(ИмяВременногоФайла);
+HTMLТекстОтчета = ЧтениеТекста.Прочитать();
+ЧтениеТекста.Закрыть();
+УдалитьФайлы(ИмяВременногоФайла); 
+ТекстСообщения = ТекстСообщения + Символы.ПС + HTMLТекстОтчета; 
+
+Алгоритм("ОтправитьEmail",ЗапросСсылка,ПочтаПолучателей,ТемаСообщения,ТекстСообщения,ТипТекстаПочтовогоСообщения.HTML,ГуидУчетнойЗаписиПочты,Вложения);		
+
+Если Успешно и не Отладка  Тогда
+	УстановитьДатуПоследнейВыгрузки(Система,ЗапросСсылка,ТекущаяДата());
+КонецЕсли;',
+  'Комментарий': 'СКД в виде текста (как вложение или в тело письма)'
+ },
+ 'ТЧ': [
+  {
+   'Переменные': [
+    {
+     'Имя': 'ТекстЗапроса',
+     'Разделитель': null,
+     'ЗначениеСтрока': '/****** Скрипт для команды SelectTopNRows из среды SSMS  ******/
+SELECT EmployeeWorklog.UUID
+      ,EmployeeWorklog.Система
+      ,EmployeeWorklog.id
+      ,EmployeeWorklog.issueId
+      ,EmployeeWorklog.IssueType
+      ,EmployeeWorklog.timeM
+      ,EmployeeWorklog.started
+      ,EmployeeWorklog.updated
+      ,EmployeeWorklog.comment
+      ,EmployeeWorklog.authorId
+      ,EmployeeWorklog.updateAuthorId
+      ,EmployeeWorklog.authorName
+      ,EmployeeWorklog.updateAuthorName
+      ,EmployeeWorklog.IssueNumber
+      ,EmployeeWorklog.IssueSubject
+	  ,ISNULL(MappingUsers.UniqueName,authorId) as EmployeeName
+  FROM EmployeeWorklog
+  LEFT JOIN MappingUsers on EmployeeWorklog.Система = MappingUsers.Система and EmployeeWorklog.authorId = MappingUsers.id
+  WHERE EmployeeWorklog.started >=  &ДатаС --\u002720221020 12:00:00:000\u0027',
+     'Комментарий': ''
+    },
+    {
+     'Имя': 'ТекстXMLСКД',
+     'Разделитель': null,
+     'ЗначениеСтрока': '<?xml version="1.0" encoding="UTF-8"?>
+<DataCompositionSchema xmlns="http://v8.1c.ru/8.1/data-composition-system/schema" xmlns:dcscom="http://v8.1c.ru/8.1/data-composition-system/common" xmlns:dcscor="http://v8.1c.ru/8.1/data-composition-system/core" xmlns:dcsset="http://v8.1c.ru/8.1/data-composition-system/settings" xmlns:v8="http://v8.1c.ru/8.1/data/core" xmlns:v8ui="http://v8.1c.ru/8.1/data/ui" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<dataSource>
+		<name>ИсточникДанных1</name>
+		<dataSourceType>Local</dataSourceType>
+	</dataSource>
+	<dataSet xsi:type="DataSetObject">
+		<name>НаборДанных1</name>
+		<field xsi:type="DataSetFieldField">
+			<dataPath>Сотрудник</dataPath>
+			<field>Сотрудник</field>
+			<title xsi:type="v8:LocalStringType">
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Сотрудник</v8:content>
+				</v8:item>
+			</title>
+			<appearance/>
+			<inputParameters/>
+		</field>
+		<field xsi:type="DataSetFieldField">
+			<dataPath>Трудозатраты</dataPath>
+			<field>Трудозатраты</field>
+			<title xsi:type="v8:LocalStringType">
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Трудозатраты</v8:content>
+				</v8:item>
+			</title>
+			<valueType>
+				<v8:Type>xs:decimal</v8:Type>
+				<v8:NumberQualifiers>
+					<v8:Digits>0</v8:Digits>
+					<v8:FractionDigits>0</v8:FractionDigits>
+					<v8:AllowedSign>Any</v8:AllowedSign>
+				</v8:NumberQualifiers>
+			</valueType>
+			<appearance/>
+			<inputParameters/>
+		</field>
+		<field xsi:type="DataSetFieldField">
+			<dataPath>Комментарий</dataPath>
+			<field>Комментарий</field>
+			<title xsi:type="v8:LocalStringType">
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Комментарий</v8:content>
+				</v8:item>
+			</title>
+			<appearance/>
+			<inputParameters/>
+		</field>
+		<field xsi:type="DataSetFieldField">
+			<dataPath>НомерЗадачи</dataPath>
+			<field>НомерЗадачи</field>
+			<title xsi:type="v8:LocalStringType">
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Номер задачи</v8:content>
+				</v8:item>
+			</title>
+			<appearance/>
+			<inputParameters/>
+		</field>
+		<field xsi:type="DataSetFieldField">
+			<dataPath>ТемаЗадачи</dataPath>
+			<field>ТемаЗадачи</field>
+			<title xsi:type="v8:LocalStringType">
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Тема задачи</v8:content>
+				</v8:item>
+			</title>
+			<appearance/>
+			<inputParameters/>
+		</field>
+		<field xsi:type="DataSetFieldField">
+			<dataPath>ДатаТрудозатрат</dataPath>
+			<field>ДатаТрудозатрат</field>
+			<title xsi:type="v8:LocalStringType">
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Дата трудозатрат</v8:content>
+				</v8:item>
+			</title>
+			<valueType>
+				<v8:Type>xs:dateTime</v8:Type>
+				<v8:DateQualifiers>
+					<v8:DateFractions>DateTime</v8:DateFractions>
+				</v8:DateQualifiers>
+			</valueType>
+			<appearance/>
+			<inputParameters/>
+		</field>
+		<dataSource>ИсточникДанных1</dataSource>
+		<objectName>ТЗ</objectName>
+	</dataSet>
+	<calculatedField>
+		<dataPath>ТрудозатратыЧ</dataPath>
+		<expression>Трудозатраты/60</expression>
+		<title xsi:type="v8:LocalStringType">
+			<v8:item>
+				<v8:lang>ru</v8:lang>
+				<v8:content>Трудозатраты, Ч</v8:content>
+			</v8:item>
+		</title>
+		<appearance>
+			<dcscor:item xsi:type="dcsset:SettingsParameterValue">
+				<dcscor:parameter>Формат</dcscor:parameter>
+				<dcscor:value xsi:type="v8:LocalStringType">
+					<v8:item>
+						<v8:lang>ru</v8:lang>
+						<v8:content>ЧДЦ=2</v8:content>
+					</v8:item>
+				</dcscor:value>
+			</dcscor:item>
+		</appearance>
+		<valueType>
+			<v8:Type>xs:string</v8:Type>
+			<v8:StringQualifiers>
+				<v8:Length>0</v8:Length>
+				<v8:AllowedLength>Variable</v8:AllowedLength>
+			</v8:StringQualifiers>
+		</valueType>
+		<inputParameters/>
+	</calculatedField>
+	<totalField>
+		<dataPath>Трудозатраты</dataPath>
+		<expression>Сумма(Трудозатраты)</expression>
+	</totalField>
+	<totalField>
+		<dataPath>ТрудозатратыЧ</dataPath>
+		<expression>Сумма(ТрудозатратыЧ)</expression>
+	</totalField>
+	<parameter>
+		<name>Параметр1</name>
+		<title xsi:type="v8:LocalStringType">
+			<v8:item>
+				<v8:lang>ru</v8:lang>
+				<v8:content>Параметр1</v8:content>
+			</v8:item>
+		</title>
+		<valueType>
+			<v8:Type>xs:decimal</v8:Type>
+			<v8:NumberQualifiers>
+				<v8:Digits>0</v8:Digits>
+				<v8:FractionDigits>0</v8:FractionDigits>
+				<v8:AllowedSign>Any</v8:AllowedSign>
+			</v8:NumberQualifiers>
+		</valueType>
+		<value xsi:type="xs:decimal">0</value>
+		<useRestriction>false</useRestriction>
+	</parameter>
+	<settingsVariant>
+		<dcsset:name>Основной</dcsset:name>
+		<dcsset:presentation xsi:type="xs:string">Основной</dcsset:presentation>
+		<dcsset:settings xmlns:style="http://v8.1c.ru/8.1/data/ui/style" xmlns:sys="http://v8.1c.ru/8.1/data/ui/fonts/system" xmlns:web="http://v8.1c.ru/8.1/data/ui/colors/web" xmlns:win="http://v8.1c.ru/8.1/data/ui/colors/windows">
+			<dcsset:selection>
+				<dcsset:item xsi:type="dcsset:SelectedItemField">
+					<dcsset:field>Сотрудник</dcsset:field>
+				</dcsset:item>
+				<dcsset:item xsi:type="dcsset:SelectedItemField">
+					<dcsset:field>ДатаТрудозатрат</dcsset:field>
+				</dcsset:item>
+				<dcsset:item xsi:type="dcsset:SelectedItemField">
+					<dcsset:field>НомерЗадачи</dcsset:field>
+				</dcsset:item>
+				<dcsset:item xsi:type="dcsset:SelectedItemField">
+					<dcsset:field>ТемаЗадачи</dcsset:field>
+				</dcsset:item>
+				<dcsset:item xsi:type="dcsset:SelectedItemField">
+					<dcsset:field>Комментарий</dcsset:field>
+				</dcsset:item>
+				<dcsset:item xsi:type="dcsset:SelectedItemField">
+					<dcsset:field>ТрудозатратыЧ</dcsset:field>
+				</dcsset:item>
+			</dcsset:selection>
+			<dcsset:dataParameters/>
+			<dcsset:order>
+				<dcsset:item xsi:type="dcsset:OrderItemField">
+					<dcsset:field>Сотрудник</dcsset:field>
+					<dcsset:orderType>Asc</dcsset:orderType>
+				</dcsset:item>
+				<dcsset:item xsi:type="dcsset:OrderItemField">
+					<dcsset:field>ДатаТрудозатрат</dcsset:field>
+					<dcsset:orderType>Asc</dcsset:orderType>
+				</dcsset:item>
+			</dcsset:order>
+			<dcsset:outputParameters>
+				<dcscor:item xsi:type="dcsset:SettingsParameterValue">
+					<dcscor:parameter>МакетОформления</dcscor:parameter>
+					<dcscor:value xsi:type="xs:string">Зеленый</dcscor:value>
+				</dcscor:item>
+			</dcsset:outputParameters>
+			<dcsset:item xsi:type="dcsset:StructureItemGroup">
+				<dcsset:groupItems>
+					<dcsset:item xsi:type="dcsset:GroupItemField">
+						<dcsset:field>Сотрудник</dcsset:field>
+						<dcsset:groupType>Items</dcsset:groupType>
+						<dcsset:periodAdditionType>None</dcsset:periodAdditionType>
+						<dcsset:periodAdditionBegin xsi:type="xs:dateTime">0001-01-01T00:00:00</dcsset:periodAdditionBegin>
+						<dcsset:periodAdditionEnd xsi:type="xs:dateTime">0001-01-01T00:00:00</dcsset:periodAdditionEnd>
+					</dcsset:item>
+				</dcsset:groupItems>
+				<dcsset:order>
+					<dcsset:item xsi:type="dcsset:OrderItemAuto"/>
+				</dcsset:order>
+				<dcsset:selection>
+					<dcsset:item xsi:type="dcsset:SelectedItemAuto"/>
+				</dcsset:selection>
+				<dcsset:outputParameters/>
+				<dcsset:item xsi:type="dcsset:StructureItemGroup">
+					<dcsset:order>
+						<dcsset:item xsi:type="dcsset:OrderItemAuto"/>
+					</dcsset:order>
+					<dcsset:selection>
+						<dcsset:item xsi:type="dcsset:SelectedItemAuto"/>
+					</dcsset:selection>
+					<dcsset:outputParameters/>
+				</dcsset:item>
+			</dcsset:item>
+		</dcsset:settings>
+	</settingsVariant>
+</DataCompositionSchema>',
+     'Комментарий': ''
+    }
+   ]
+  }
+ ]
+}
