@@ -1,0 +1,23 @@
+﻿{
+ 'Реквизиты': {
+  'Владелец': 'e1cib/data/Справочник.УМ_ИнформационныеБазы?ref=a12de1864915924911ed13c3b2a06616',
+  'Наименование': 'структура Connection и from',
+  'Код1СДляПодключения': 'СтрокаПодключения = "Provider = ADSDSOObject; USER ID=[user]; Password=[password]";
+КОМСоединение	= новый COMОбъект("ADODB.Connection");
+КОМСоединение.Open(СтрокаПодключения);
+
+
+FROMLDAP = "LDAP://[server]";
+FROM = "\u0027"+FROMLDAP+"/DC=t-medica,DC=com\u0027";
+Domain = "t-medica.com";
+
+
+Соединение = Новый структура("Connection,FROMLDAP,From,Domain,OUНовыхПользователей",КОМСоединение,FROMLDAP,FROM,Domain);',
+  'ТипПодключения': 'ADODB'
+ },
+ 'ТЧ': [
+  {
+   'Переменные': []
+  }
+ ]
+}

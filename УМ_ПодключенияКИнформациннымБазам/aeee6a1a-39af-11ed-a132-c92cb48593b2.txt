@@ -1,0 +1,23 @@
+﻿{
+ 'Реквизиты': {
+  'Владелец': 'e1cib/data/Справочник.УМ_ИнформационныеБазы?ref=a132c92cb48593b211ed39af9db6c5ec',
+  'Наименование': 'структура Connection и from',
+  'Код1СДляПодключения': 'СтрокаПодключения = "Provider = ADSDSOObject; USER ID=[user]; Password=[password]";
+КОМСоединение	= новый COMОбъект("ADODB.Connection");
+КОМСоединение.Open(СтрокаПодключения);
+
+
+FROMLDAP = "LDAP://[server]";
+FROM = "\u0027"+FROMLDAP+"/DC=tm-invest,DC=ru\u0027";
+Domain = "tm-invest.ru";
+
+
+Соединение = Новый структура("Connection,FROMLDAP,From,Domain,OUНовыхПользователей",КОМСоединение,FROMLDAP,FROM,Domain);',
+  'ТипПодключения': 'ADODB'
+ },
+ 'ТЧ': [
+  {
+   'Переменные': []
+  }
+ ]
+}

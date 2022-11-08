@@ -1,0 +1,16 @@
+﻿{
+ 'Реквизиты': {
+  'Владелец': 'e1cib/data/Справочник.УМ_ИнформационныеБазы?ref=a12cef295ee2b5a311ed0cb47f31abbc',
+  'Наименование': 'V83COMConnector',
+  'Код1СДляПодключения': ' СтрокаПодключения = "Srvr=""[server]"";Ref=""[bdname]"";Usr=""[user]"";Pwd=""[password]""";
+V83COMConnector =  новый COMОбъект("V83.COMConnector");			             
+Соединение = V83COMConnector.Connect(СтрокаПодключения); 
+',
+  'ТипПодключения': 'V83COMConnector'
+ },
+ 'ТЧ': [
+  {
+   'Переменные': []
+  }
+ ]
+}

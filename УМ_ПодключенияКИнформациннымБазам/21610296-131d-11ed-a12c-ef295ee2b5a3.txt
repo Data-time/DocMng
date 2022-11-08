@@ -1,0 +1,15 @@
+﻿{
+ 'Реквизиты': {
+  'Владелец': 'e1cib/data/Справочник.УМ_ИнформационныеБазы?ref=a12cef295ee2b5a311ed131cfb1c5f28',
+  'Наименование': 'DWH ADODB SQL Server',
+  'Код1СДляПодключения': 'СтрокаПодключения = "DRIVER=SQL Server;Server=[server];Database=[bdname];UID=[user];PWD=[password]";
+Соединение	= новый COMОбъект("ADODB.Connection");
+Соединение.Open(СтрокаПодключения);',
+  'ТипПодключения': 'ADODB'
+ },
+ 'ТЧ': [
+  {
+   'Переменные': []
+  }
+ ]
+}
