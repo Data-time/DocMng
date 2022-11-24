@@ -5,7 +5,7 @@
   'Код1СДляПодключения': 'СтрокаПодключения = "DRIVER=SQL Server;Server=[server];Database=[bdname];UID=[user];PWD=[password]";
 Соединение	= новый COMОбъект("ADODB.Connection");
 Соединение.Open(СтрокаПодключения);',
-  'ТипПодключения': ''
+  'ТипПодключения': 'ADODB'
  },
  'ТЧ': [
   {
