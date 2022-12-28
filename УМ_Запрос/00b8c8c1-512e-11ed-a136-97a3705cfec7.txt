@@ -118,26 +118,14 @@ HTMLТекстОтчета = ЧтениеТекста.Прочитать();
     {
      'Имя': 'ТекстЗапроса',
      'Разделитель': null,
-     'ЗначениеСтрока': '/****** Скрипт для команды SelectTopNRows из среды SSMS  ******/
-SELECT EmployeeWorklog.UUID
-      ,EmployeeWorklog.Система
-      ,EmployeeWorklog.id
-      ,EmployeeWorklog.issueId
-      ,EmployeeWorklog.IssueType
-      ,EmployeeWorklog.timeM
-      ,EmployeeWorklog.started
-      ,EmployeeWorklog.updated
-      ,EmployeeWorklog.comment
-      ,EmployeeWorklog.authorId
-      ,EmployeeWorklog.updateAuthorId
-      ,EmployeeWorklog.authorName
-      ,EmployeeWorklog.updateAuthorName
-      ,EmployeeWorklog.IssueNumber
-      ,EmployeeWorklog.IssueSubject
-	  ,ISNULL(MappingUsers.UniqueName,authorId) as EmployeeName
-  FROM EmployeeWorklog
-  LEFT JOIN MappingUsers on EmployeeWorklog.Система = MappingUsers.Система and EmployeeWorklog.authorId = MappingUsers.id
-  WHERE EmployeeWorklog.started >=  &ДатаС --\u002720221020 12:00:00:000\u0027',
+     'ЗначениеСтрока': 'SELECT EmployeeWorklogs.EmployeeName
+      ,EmployeeWorklogs.timeM
+      ,EmployeeWorklogs.started
+      ,EmployeeWorklogs.comment
+      ,EmployeeWorklogs.IssueNumber
+      ,EmployeeWorklogs.IssueSubject
+  FROM EmployeeWorklogs
+  WHERE EmployeeWorklogs.started >=  &ДатаС --\u002720221020 12:00:00:000\u0027',
      'Комментарий': ''
     },
     {
