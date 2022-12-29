@@ -124,28 +124,47 @@ HTTPЗапрос.Заголовки = Соединение.Заголовки;
 	НовСтр.id = СтрОтвета.id;
 	НовСтр.UUID = СистемаGUID + СтрОтвета.id;
 	
-	НовСтр.issueId = XMLСтрока(СтрОтвета.issueId);
-	НовСтр.timeM = Цел(СтрОтвета.timeM); 
+	Если СтрОтвета.Свойство("issueId") Тогда 
+		НовСтр.issueId = XMLСтрока(СтрОтвета.issueId); 
+	КонецЕсли;
+	
+	Если СтрОтвета.Свойство("timeM") Тогда 
+		НовСтр.timeM = СтрОтвета.timeM; 
+	КонецЕсли;
 		
 	started = Лев(XMLСтрока(СтрОтвета.started),СтрДлина(XMLСтрока(СтрОтвета.started))-3);  
 	НовСтр.started = МестноеВремя(\u002719700101\u0027+Число(started));
 
 	updated = Лев(XMLСтрока(СтрОтвета.updated),СтрДлина(XMLСтрока(СтрОтвета.updated))-3);
 	НовСтр.updated = МестноеВремя(\u002719700101\u0027+Число(updated)); 
+	 
+	Если СтрОтвета.Свойство("comment") Тогда 
+		НовСтр.comment = СтрОтвета.comment; 
+	КонецЕсли;
 	
-	НовСтр.comment = СтрОтвета.comment; 
 	Если СтрОтвета.Свойство("authorName") Тогда 
 		НовСтр.authorName = СтрОтвета.authorName; 
 	КонецЕсли;  
-
+	
 	Если СтрОтвета.Свойство("updateAuthorName") Тогда 
 		НовСтр.updateAuthorName = СтрОтвета.updateAuthorName; 
 	КонецЕсли;
-	 
-	НовСтр.authorId = СтрОтвета.authorId;
-	НовСтр.updateAuthorId = СтрОтвета.updateAuthorId;
-	НовСтр.IssueNumber = СтрОтвета.IssueNumber;
-	НовСтр.IssueSubject = СтрОтвета.IssueSubject;
+	
+	Если СтрОтвета.Свойство("authorId") Тогда 
+		НовСтр.authorId = СтрОтвета.authorId; 
+	КонецЕсли; 
+	
+	Если СтрОтвета.Свойство("updateAuthorId") Тогда 
+		НовСтр.updateAuthorId = СтрОтвета.updateAuthorId; 
+	КонецЕсли;
+	  
+	Если СтрОтвета.Свойство("IssueNumber") Тогда 
+		НовСтр.IssueNumber = СтрОтвета.IssueNumber; 
+	КонецЕсли;
+	
+	Если СтрОтвета.Свойство("IssueSubject") Тогда 
+		НовСтр.IssueSubject = СтрОтвета.IssueSubject; 
+	КонецЕсли;
 		
 КонецЦикла; 
 
