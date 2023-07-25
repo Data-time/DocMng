@@ -8,11 +8,12 @@
 
 
 FROMLDAP = "LDAP://[server]";
-FROM = "\u0027"+FROMLDAP+"/DC=tm-invest,DC=ru\u0027";
+DC = "DC=tm-invest,DC=ru";
+FROM = "\u0027"+FROMLDAP+"/"+DC+"\u0027";
 Domain = "tm-invest.ru";
 
 
-Соединение = Новый структура("Connection,FROMLDAP,From,Domain,OUНовыхПользователей",КОМСоединение,FROMLDAP,FROM,Domain);',
+Соединение = Новый структура("Connection,FROMLDAP,From,Domain,DC",КОМСоединение,FROMLDAP,FROM,Domain,DC);',
   'ТипПодключения': 'ADODB'
  },
  'ТЧ': [

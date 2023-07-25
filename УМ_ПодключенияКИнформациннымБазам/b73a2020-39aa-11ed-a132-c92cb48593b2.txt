@@ -7,12 +7,13 @@
 КОМСоединение.Open(СтрокаПодключения);
 
 
-FROMLDAP = "LDAP://[server]";
-FROM = "\u0027"+FROMLDAP+"/DC=tmssc,DC=ru\u0027";
+FROMLDAP = "LDAP://[server]"; 
+DC = "DC=tmssc,DC=ru";
+FROM = "\u0027"+FROMLDAP+"/"+DC+"\u0027";
 Domain = "tmssc.ru";
 
 
-Соединение = Новый структура("Connection,FROMLDAP,From,Domain,OUНовыхПользователей",КОМСоединение,FROMLDAP,FROM,Domain);',
+Соединение = Новый структура("Connection,FROMLDAP,From,Domain,DC",КОМСоединение,FROMLDAP,FROM,Domain,DC);',
   'ТипПодключения': 'ADODB'
  },
  'ТЧ': [
