@@ -57,7 +57,7 @@
 	Выборка = РезультатЗапроса.Выбрать();
 	Пока Выборка.Следующий() Цикл 
 		ДокСсылка = Выборка.Ссылка; 
-		СтруктураОбъекта = Новый Структура("ExtGUID,OrganizationINN,ContractorINN,ContractorKPP,sum,CurrencyCode,InitiatorName,Purpose,Deadline,Comment,ListArticleDDS,sumNDS,Number,Date");
+		СтруктураОбъекта = Новый Структура("ExtGUID,OrganizationINN,ContractorINN,ContractorKPP,sum,CurrencyCode,InitiatorName,Purpose,Deadline,Comment,ListArticleDDS,sumNDS,Number");
 		СтруктураОбъекта.ExtGUID = XMLСтрока(ДокСсылка);
 		СтруктураОбъекта.OrganizationINN = ДокСсылка.Организация.ИНН;   
 		Если ДокСсылка.Контрагенты.Количество() > 0 Тогда
@@ -79,7 +79,6 @@
 		СтруктураОбъекта.Deadline = ДокСсылка.СрокИсполнения;
 		
 		СтруктураОбъекта.Number = ДокСсылка.РегистрационныйНомер;
-		СтруктураОбъекта.Date = ДокСсылка.ДатаРегистрации;
 		
 		ДопДанныеПоДокументу = Справочники.DT_Данные_ЗаявкаНаОплату.ПустаяСсылка();
 		Запрос = Новый Запрос;
