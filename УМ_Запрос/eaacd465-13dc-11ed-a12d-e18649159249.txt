@@ -142,10 +142,10 @@ dso = ПолучитьCOMОбъект("LDAP:");
     Данные1С.DisplayName,
     Данные1С.cn,
     AD.title as AD_title,
-	AD.company as AD_company,
-	AD.department as AD_department,
-	AD.DisplayName as AD_DisplayName,
-	AD.cn as AD_cn
+    AD.company as AD_company,
+    AD.department as AD_department,
+    AD.DisplayName as AD_DisplayName,
+    AD.cn as AD_cn
 
 FROM (SELECT        
     Организации.Наименование AS company, 
@@ -169,9 +169,10 @@ FROM
         LEFT OUTER JOIN dbo.Подразделения AS Подразделения ON Подразделения.UUID = Сотрудники.ПодразделениеUUID
 
 
-where ФизическиеЛица.EmployeeID is not null) AS Данные1С
+where ФизическиеЛица.EmployeeID is not null
+AND ФизическиеЛица.EmployeeID <> \u0027\u0027
+AND ФизическиеЛица.EmployeeID <> \u0027-\u0027) AS Данные1С
 INNER JOIN dbo.AD AS AD ON Данные1С.EmployeeID = AD.EmployeeID
-
 and AD.Система = \u0027&СистемаGUID\u0027
 and AD.IsActive = 1
 and (
