@@ -5,7 +5,7 @@
 //Параметры выгрузки
 //-----------------------------------------------------------------
 Отладка = Ложь;
-Отладка_EmployeeID = ""; //"1026113914"; 
+Отладка_EmployeeID = "1066200549"; //"1026113914"; 
 Отладка_ТолькоСообщения = Истина;
 
 //-----------------------------------------------------------------  
@@ -36,7 +36,7 @@
 //----------------------------------------------------------------- 
 	  
 Если Отладка и ЗначениеЗаполнено(Отладка_EmployeeID) Тогда   
-	ТекстЗапросаSQL = ТекстЗапросаSQL + " and AD.EmployeeID = \u0027"+Отладка_EmployeeID+"\u0027";
+	ТекстЗапросаSQL = ТекстЗапросаSQL + " and ДанныеAD.EmployeeID = \u0027"+Отладка_EmployeeID+"\u0027";
 КонецЕсли;	  
 	  
 dso = ПолучитьCOMОбъект("LDAP:");
@@ -47,15 +47,24 @@ dso = ПолучитьCOMОбъект("LDAP:");
 МассивСвойствОбновления.Добавить("title");
 МассивСвойствОбновления.Добавить("department");
 МассивСвойствОбновления.Добавить("company");
-МассивСвойствОбновления.Добавить("DisplayName");
-
+МассивСвойствОбновления.Добавить("DisplayName"); 
+МассивСвойствОбновления.Добавить("sn"); //Фамилия
+МассивСвойствОбновления.Добавить("givenName"); //Имя
+//+ cn + name 
+МассивСвойствОбновления.Добавить("extensionAttribute1"); //SiteSD - имя площадки для SD
+МассивСвойствОбновления.Добавить("extensionAttribute2"); //departmentSD - имя отдела для SD
 
 		              
 ЗаписиSQL = СоединениеDWH.Execute(ТекстЗапросаSQL);		
 Пока ЗаписиSQL.EOF=0 Цикл
 	Обработано = Обработано + 1;
-	ADsPath = ЗаписиSQL.Fields("ADsPath").Value;	
-	obj = dso.OpenDSObject(ADsPath, ТекПользовательАД, ТекПарольАД, 0);
+	ADsPath = ЗаписиSQL.Fields("ADsPath").Value;
+	ADsPathБезСпецСимволов = СтрЗаменить(ADsPath,"\\",""); //убираем спецсимволы	
+	Попытка
+		obj = dso.OpenDSObject(ADsPath, ТекПользовательАД, ТекПарольАД, 0);
+	Исключение 
+		ВызватьИсключение ОписаниеОшибки() + ADsPath+". Попробуйте предварительно загрузить данные из AD";
+	КонецПопытки;
 	
 	Если Отладка И Отладка_ТолькоСообщения Тогда
 		Сообщить("Предполагается изменение : "+ЗаписиSQL.Fields("DisplayName").Value);
@@ -92,25 +101,37 @@ dso = ПолучитьCOMОбъект("LDAP:");
 		obj.SetInfo(); //записать изменения
 	КонецЕсли;
 	
-	Если Отладка И Отладка_ТолькоСообщения Тогда
-		//не изменять
-	Иначе	         
-		//CN и Name изменяется только перемещением
-		CN_1С = ЗаписиSQL.Fields("cn").Value;
-		CN_AD = ЗаписиSQL.Fields("AD_cn").Value; 
-		Если CN_1С <> CN_AD Тогда
-			НовыйADsPath = СтрЗаменить(ADsPath,"CN="+CN_AD+","   ,   "CN="+CN_1С+",");
-			OUADsPath = СтрЗаменить(ADsPath,"CN="+CN_AD+",","");
-			Если НовыйADsPath = ADsPath Тогда
-				СтрокаОшибок = СтрокаОшибок + "Не удалось вычислить новый ADsPath";
-				Успешно = Ложь; 
-			Иначе 
-				objOU = dso.OpenDSObject(OUADsPath, ТекПользовательАД, ТекПарольАД, 0);
+		         
+	//CN и Name изменяется только перемещением
+	CN_1С = ЗаписиSQL.Fields("cn").Value;
+	CN_AD = ЗаписиSQL.Fields("AD_cn").Value; 
+	Если CN_1С <> CN_AD Тогда		
+		НовыйADsPath = СтрЗаменить(ADsPathБезСпецСимволов,"CN="+CN_AD+","   ,   "CN="+CN_1С+",");
+		OUADsPath = СтрЗаменить(ADsPathБезСпецСимволов,"CN="+CN_AD+",","");  
+		Если НовыйADsPath = ADsPath Тогда
+			СтрокаОшибок = СтрокаОшибок + Символы.ПС +"Не удалось вычислить новый ADsPath для: "+ADsPath;
+			Успешно = Ложь; 
+		ИначеЕсли Отладка И Отладка_ТолькоСообщения Тогда
+			//не изменять, только сообщения
+		    Сообщить("ADsPath изменен с "+ADsPath+" на "+НовыйADsPath);
+		Иначе 
+			Попытка
+				objOU = dso.OpenDSObject(OUADsPath, ТекПользовательАД, ТекПарольАД, 0); 
+			Исключение
+				ВызватьИсключение ОписаниеОшибки()+". "+OUADsPath;
+			КонецПопытки; 
+			
+			Попытка
 				newobj = objOU.MoveHere(ADsPath,"CN="+CN_1С);
-			КонецЕсли; 
+			Исключение
+				ВызватьИсключение ОписаниеОшибки()+". "+OUADsPath;
+			КонецПопытки; 
+			
 				
-		КонецЕсли;
+		КонецЕсли; 
+				
 	КонецЕсли;
+	
 	
 	Обновлено = Обновлено + 1;  
 		
@@ -135,19 +156,111 @@ dso = ПолучитьCOMОбъект("LDAP:");
      'Имя': 'ТекстЗапросаSQL',
      'Разделитель': null,
      'ЗначениеСтрока': 'SELECT 
-    AD.ADsPath,
+    ДанныеAD.ADsPath,
     Данные1С.title,
     Данные1С.company,
     Данные1С.department,
     Данные1С.DisplayName,
     Данные1С.cn,
-    AD.title as AD_title,
-    AD.company as AD_company,
-    AD.department as AD_department,
-    AD.DisplayName as AD_DisplayName,
+	Данные1С.sn,
+	Данные1С.givenName,
+    ДанныеAD.ПлощадкаSD as extensionAttribute1,
+    Данные1С.department as extensionAttribute2,
+    ДанныеAD.title as AD_title,
+    ДанныеAD.company as AD_company,
+    ДанныеAD.department as AD_department,
+    ДанныеAD.DisplayName as AD_DisplayName,
+    ДанныеAD.cn as AD_cn,
+	ДанныеAD.sn as AD_sn,
+	ДанныеAD.givenName as AD_givenName,
+    ДанныеAD.extensionAttribute1 as AD_extensionAttribute1,
+    ДанныеAD.extensionAttribute2 as AD_extensionAttribute2
+FROM (SELECT        
+    CAST(Организации.Наименование AS nvarchar(64)) AS company, 
+    CAST(isnull(Подразделения.Наименование,\u0027\u0027) AS nvarchar(64)) AS department, 
+    ФизическиеЛица.EmployeeID, 
+    ФизическиеЛица.ИНН, 
+    CAST(ФизическиеЛица.Наименование AS nvarchar(64)) AS DisplayName,
+    CAST(ФизическиеЛица.Наименование AS nvarchar(64)) AS cn,
+	isNull(PARSENAME(REPLACE(ФизическиеЛица.Наименование, \u0027 \u0027, \u0027.\u0027), 3),\u0027\u0027) as sn,
+	isNull(PARSENAME(REPLACE(ФизическиеЛица.Наименование, \u0027 \u0027, \u0027.\u0027), 2),\u0027\u0027) as givenName,
+    CAST(Сотрудники.Должность AS nvarchar(128)) AS title, 
+    Сотрудники.ВидЗанятости, 
+    Сотрудники.ВидЗанятостиКод, 
+    Сотрудники.ДатаПриемаНаРаботу, 
+    Сотрудники.ДатаУвольнения
+
+FROM
+    dbo.ФизическиеЛица AS ФизическиеЛица 
+        INNER JOIN ЛучшиеСотрудникиПоEmployeeID AS ЛучшиеСотрудникиПоEmployeeID ON      ЛучшиеСотрудникиПоEmployeeID.ФизлицоUUID = ФизическиеЛица.UUID
+        INNER JOIN dbo.Сотрудники AS Сотрудники ON ЛучшиеСотрудникиПоEmployeeID.СотрудникUUID = Сотрудники.UUID 
+        INNER JOIN dbo.Организации AS Организации ON Организации.UUID = Сотрудники.ОрганизацияUUID        
+        LEFT OUTER JOIN dbo.Подразделения AS Подразделения ON Подразделения.UUID = Сотрудники.ПодразделениеUUID
+
+
+where ФизическиеЛица.EmployeeID is not null
+    AND ФизическиеЛица.EmployeeID <> \u0027\u0027
+    AND ФизическиеЛица.EmployeeID <> \u0027-\u0027
+) AS Данные1С
+
+INNER JOIN (Select 
+    AD.ADsPath,
+    AD.EmployeeID,
+    isNULL(AD.title,\u0027\u0027) as title,
+    isNULL(AD.company,\u0027\u0027) as company, 
+    isNULL(AD.department,\u0027\u0027) as department, 
+    isNULL(AD.DisplayName,\u0027\u0027) as DisplayName, 
+    isNULL(AD.cn,\u0027\u0027) as cn,
+	isNULL(AD.sn,\u0027\u0027) as sn,
+	isNULL(AD.givenName,\u0027\u0027) as givenName,
+    isNULL(AD.extensionAttribute1,\u0027\u0027) as extensionAttribute1,
+    isNULL(AD.extensionAttribute2,\u0027\u0027) as extensionAttribute2,
+    isNULL(AD_PrefixFor1C.ПлощадкаSD,\u0027\u0027) as ПлощадкаSD 
+    from AD LEFT JOIN AD_PrefixFor1C 
+        ON AD.Система = AD_PrefixFor1C.СистемаAD
+    WHERE AD.IsActive = 1
+        and AD.Система = \u0027&СистемаGUID\u0027
+        ) AS ДанныеAD 
+
+ON Данные1С.EmployeeID = ДанныеAD.EmployeeID
+
+WHERE 
+    (ДанныеAD.title <> Данные1С.title 
+    or ДанныеAD.company <> Данные1С.company 
+    or ДанныеAD.department <> Данные1С.department
+    or ДанныеAD.DisplayName <> Данные1С.DisplayName
+    or ДанныеAD.cn <> Данные1С.cn
+	or ДанныеAD.sn <> Данные1С.sn
+	or ДанныеAD.givenName <> Данные1С.givenName
+    or ДанныеAD.extensionAttribute1 <> ДанныеAD.ПлощадкаSD
+    or ДанныеAD.extensionAttribute2 <> Данные1С.department)',
+     'Комментарий': ''
+    },
+    {
+     'Имя': 'СоединениеDWH',
+     'Разделитель': 'e1cib/data/Справочник.УМ_ИнформационныеБазы?ref=00000000000000000000000000000000',
+     'ЗначениеСтрока': '',
+     'Комментарий': ''
+    },
+    {
+     'Имя': 'ТекстЗапросаSQL_ПоКонтуру_Тест',
+     'Разделитель': null,
+     'ЗначениеСтрока': 'SELECT 
+    AD.ADsPath,
+	AD.Контур,
+    Данные1С.title,
+	AD.title as AD_title,
+    Данные1С.company,
+	AD.company as AD_company,
+    Данные1С.department,
+	AD.department as AD_department,
+    Данные1С.DisplayName,
+	AD.DisplayName as AD_DisplayName,
+    Данные1С.cn,
     AD.cn as AD_cn
 
-FROM (SELECT        
+FROM (SELECT 
+	ФизическиеЛица.Контур AS Контур,	
     Организации.Наименование AS company, 
     Подразделения.Наименование AS department, 
     ФизическиеЛица.EmployeeID, 
@@ -161,19 +274,19 @@ FROM (SELECT
     Сотрудники.ДатаУвольнения
 
 FROM
-    dbo.ФизическиеЛица AS ФизическиеЛица 
-        INNER JOIN ЛучшиеСотрудникиПоEmployeeID AS ЛучшиеСотрудникиПоEmployeeID ON ЛучшиеСотрудникиПоEmployeeID.ФизлицоUUID = ФизическиеЛица.UUID
-        INNER JOIN dbo.Сотрудники AS Сотрудники ON ЛучшиеСотрудникиПоEmployeeID.СотрудникUUID = Сотрудники.UUID 
-        INNER JOIN dbo.Организации AS Организации ON Организации.UUID = Сотрудники.ОрганизацияUUID
-        
+    (SELECT ФЛ.*,Системы.Контур AS Контур FROM dbo.ФизическиеЛица as ФЛ INNER JOIN dbo.Системы as Системы ON ФЛ.Система = Системы.Система) AS ФизическиеЛица 
+        INNER JOIN ЛучшиеСотрудникиКонтураПоEmployeeID AS ЛучшиеСотрудникиКонтураПоEmployeeID ON (ЛучшиеСотрудникиКонтураПоEmployeeID.ФизлицоUUID = ФизическиеЛица.UUID 
+			AND ФизическиеЛица.Контур = ЛучшиеСотрудникиКонтураПоEmployeeID.Контур)
+        INNER JOIN dbo.Сотрудники AS Сотрудники ON ЛучшиеСотрудникиКонтураПоEmployeeID.СотрудникUUID = Сотрудники.UUID 
+        INNER JOIN dbo.Организации AS Организации ON Организации.UUID = Сотрудники.ОрганизацияUUID     
         LEFT OUTER JOIN dbo.Подразделения AS Подразделения ON Подразделения.UUID = Сотрудники.ПодразделениеUUID
+	where ФизическиеЛица.EmployeeID is not null
+	AND ФизическиеЛица.EmployeeID <> \u0027\u0027
+	AND ФизическиеЛица.EmployeeID <> \u0027-\u0027) AS Данные1С
 
-
-where ФизическиеЛица.EmployeeID is not null
-AND ФизическиеЛица.EmployeeID <> \u0027\u0027
-AND ФизическиеЛица.EmployeeID <> \u0027-\u0027) AS Данные1С
-INNER JOIN dbo.AD AS AD ON Данные1С.EmployeeID = AD.EmployeeID
-and AD.Система = \u0027&СистемаGUID\u0027
+INNER JOIN (SELECT ADt.*, Системы1.Контур FROM dbo.AD as ADt INNER JOIN dbo.Системы as Системы1 ON ADt.Система = Системы1.Система) AS AD 
+	ON (Данные1С.EmployeeID = AD.EmployeeID AND Данные1С.Контур = AD.Контур) 
+and AD.Система = \u0027&СистемаGUID\u0027 --\u00279f8643bd-39aa-11ed-a132-c92cb48593b2\u0027  --299357e6-35fe-11ee-a15e-a98fe163581b
 and AD.IsActive = 1
 and (
 AD.title <> Данные1С.title 
@@ -181,13 +294,8 @@ or AD.company <> Данные1С.company
 or AD.department <> Данные1С.department
 or AD.DisplayName <> Данные1С.DisplayName
 or AD.cn <> Данные1С.cn
-)',
-     'Комментарий': ''
-    },
-    {
-     'Имя': 'СоединениеDWH',
-     'Разделитель': 'e1cib/data/Справочник.УМ_ИнформационныеБазы?ref=00000000000000000000000000000000',
-     'ЗначениеСтрока': '',
+)
+',
      'Комментарий': ''
     }
    ]
