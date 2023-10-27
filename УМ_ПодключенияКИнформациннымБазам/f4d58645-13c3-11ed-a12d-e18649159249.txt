@@ -8,12 +8,13 @@
 
 
 FROMLDAP = "LDAP://[server]"; 
-DC = "DC=t-medica,DC=com"; 
+DC = "DC=t-medica,DC=com";   
+OUWorker = "OU=Workers,OU=Users,OU=Office,OU=root";
 FROM = "\u0027"+FROMLDAP+"/"+DC+"\u0027";
 Domain = "t-medica.com";
 
 
-Соединение = Новый структура("Connection,FROMLDAP,From,Domain,DC",КОМСоединение,FROMLDAP,FROM,Domain,DC);',
+Соединение = Новый структура("Connection,FROMLDAP,From,Domain,OUWorker,DC",КОМСоединение,FROMLDAP,FROM,Domain,OUWorker,DC);',
   'ТипПодключения': 'ADODB'
  },
  'ТЧ': [
