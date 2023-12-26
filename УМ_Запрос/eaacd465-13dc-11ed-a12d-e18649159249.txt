@@ -162,8 +162,8 @@ dso = ПолучитьCOMОбъект("LDAP:");
     Данные1С.department,
     Данные1С.DisplayName,
     Данные1С.cn,
-	Данные1С.sn,
-	Данные1С.givenName,
+    Данные1С.sn,
+    Данные1С.givenName,
     ДанныеAD.ПлощадкаSD as extensionAttribute1,
     Данные1С.department as extensionAttribute2,
     ДанныеAD.title as AD_title,
@@ -171,19 +171,19 @@ dso = ПолучитьCOMОбъект("LDAP:");
     ДанныеAD.department as AD_department,
     ДанныеAD.DisplayName as AD_DisplayName,
     ДанныеAD.cn as AD_cn,
-	ДанныеAD.sn as AD_sn,
-	ДанныеAD.givenName as AD_givenName,
+    ДанныеAD.sn as AD_sn,
+    ДанныеAD.givenName as AD_givenName,
     ДанныеAD.extensionAttribute1 as AD_extensionAttribute1,
     ДанныеAD.extensionAttribute2 as AD_extensionAttribute2
 FROM (SELECT        
     CAST(Организации.Наименование AS nvarchar(64)) AS company, 
-    CAST(isnull(Подразделения.Наименование,\u0027\u0027) AS nvarchar(64)) AS department, 
+    CAST(isNULL(SD_МеппингПодрзделенийДляSD.НовоеПодразделение,isnull(Подразделения.Наименование,\u0027\u0027)) AS nvarchar(64)) AS department, 
     ФизическиеЛица.EmployeeID, 
     ФизическиеЛица.ИНН, 
     CAST(ФизическиеЛица.Наименование AS nvarchar(64)) AS DisplayName,
     CAST(ФизическиеЛица.Наименование AS nvarchar(64)) AS cn,
-	isNull(PARSENAME(REPLACE(ФизическиеЛица.Наименование, \u0027 \u0027, \u0027.\u0027), 3),\u0027\u0027) as sn,
-	isNull(PARSENAME(REPLACE(ФизическиеЛица.Наименование, \u0027 \u0027, \u0027.\u0027), 2),\u0027\u0027) as givenName,
+    isNull(PARSENAME(REPLACE(ФизическиеЛица.Наименование, \u0027 \u0027, \u0027.\u0027), 3),\u0027\u0027) as sn,
+    isNull(PARSENAME(REPLACE(ФизическиеЛица.Наименование, \u0027 \u0027, \u0027.\u0027), 2),\u0027\u0027) as givenName,
     CAST(Сотрудники.Должность AS nvarchar(128)) AS title, 
     Сотрудники.ВидЗанятости, 
     Сотрудники.ВидЗанятостиКод, 
@@ -196,7 +196,9 @@ FROM
         INNER JOIN dbo.Сотрудники AS Сотрудники ON ЛучшиеСотрудникиПоEmployeeID.СотрудникUUID = Сотрудники.UUID 
         INNER JOIN dbo.Организации AS Организации ON Организации.UUID = Сотрудники.ОрганизацияUUID        
         LEFT OUTER JOIN dbo.Подразделения AS Подразделения ON Подразделения.UUID = Сотрудники.ПодразделениеUUID
-
+		LEFT OUTER JOIN dbo.SD_МеппингПодрзделенийДляSD AS SD_МеппингПодрзделенийДляSD 
+			ON SD_МеппингПодрзделенийДляSD.Подразделение = Подразделения.Наименование 
+			AND SD_МеппингПодрзделенийДляSD.Организация = Организации.Наименование
 
 where ФизическиеЛица.EmployeeID is not null
     AND ФизическиеЛица.EmployeeID <> \u0027\u0027
@@ -211,8 +213,8 @@ INNER JOIN (Select
     isNULL(AD.department,\u0027\u0027) as department, 
     isNULL(AD.DisplayName,\u0027\u0027) as DisplayName, 
     isNULL(AD.cn,\u0027\u0027) as cn,
-	isNULL(AD.sn,\u0027\u0027) as sn,
-	isNULL(AD.givenName,\u0027\u0027) as givenName,
+    isNULL(AD.sn,\u0027\u0027) as sn,
+    isNULL(AD.givenName,\u0027\u0027) as givenName,
     isNULL(AD.extensionAttribute1,\u0027\u0027) as extensionAttribute1,
     isNULL(AD.extensionAttribute2,\u0027\u0027) as extensionAttribute2,
     isNULL(AD_PrefixFor1C.ПлощадкаSD,\u0027\u0027) as ПлощадкаSD 
@@ -230,8 +232,8 @@ WHERE
     or ДанныеAD.department <> Данные1С.department
     or ДанныеAD.DisplayName <> Данные1С.DisplayName
     or ДанныеAD.cn <> Данные1С.cn
-	or ДанныеAD.sn <> Данные1С.sn
-	or ДанныеAD.givenName <> Данные1С.givenName
+    or ДанныеAD.sn <> Данные1С.sn
+    or ДанныеAD.givenName <> Данные1С.givenName
     or ДанныеAD.extensionAttribute1 <> ДанныеAD.ПлощадкаSD
     or ДанныеAD.extensionAttribute2 <> Данные1С.department)',
      'Комментарий': ''
