@@ -147,7 +147,8 @@ dso = ПолучитьCOMОбъект("LDAP:");
 КонецЕсли; 
 
 СтрокаОшибок = СтрокаОшибок + ?(СтрокаОшибок="","",Символы.ПС)+ Система +  " Обработано - "+Обработано+". Добавлено - "+Добавлено+". Обновлено - "+Обновлено+". Удалено - "+Удалено;',
-  'Комментарий': 'ВАЖНО: сравнение идет по данным DWH. До выполнения данные AD  в DWH олжны быть обновлены'
+  'Комментарий': 'ВАЖНО: сравнение идет по данным DWH. До выполнения данные AD  в DWH олжны быть обновлены
+Сравнение значений выполняется в запросе. Если потребуется сложное вычисление, то можно перенести в код 1с, но будет медленнее'
  },
  'ТЧ': [
   {
@@ -155,7 +156,48 @@ dso = ПолучитьCOMОбъект("LDAP:");
     {
      'Имя': 'ТекстЗапросаSQL',
      'Разделитель': null,
-     'ЗначениеСтрока': 'SELECT 
+     'ЗначениеСтрока': 'set nocount on
+--ВРЕМЕННАЯ ТАБЛИЦА С РАССЫЛКАМИ 
+IF OBJECT_ID(\u0027tempdb..#TemTableDWH_GroupSotr\u0027) IS NOT NULL DROP Table #TemTableDWH_GroupSotr
+
+SELECT EmployeeID, СистемаAD,extensionAttribute4,extensionAttribute5 INTO #TemTableDWH_GroupSotr  From (
+
+SELECT 
+    EmployeeID
+    ,СистемаAD
+    ,MAX(CASE WHEN ПолеADДляВыгрузки = \u0027extensionAttribute4\u0027 then ИтоговоеЗначениеРассылки else \u0027\u0027 end) as extensionAttribute4
+    ,MAX(CASE WHEN ПолеADДляВыгрузки = \u0027extensionAttribute5\u0027 then ИтоговоеЗначениеРассылки else \u0027\u0027 end) as extensionAttribute5
+FROM (SELECT 
+    EmployeeID
+    ,СистемаAD
+    ,ПолеADДляВыгрузки
+    ,STRING_AGG(ЗначениеРассылки,\u0027;\u0027) as ИтоговоеЗначениеРассылки 
+
+FROM (SELECT DISTINCT
+    [ФизическиеЛица].EmployeeID
+    ,[СотрудникиЗначенияРассылок].СистемаAD
+    ,[СотрудникиЗначенияРассылок].ПолеADДляВыгрузки
+    ,[СотрудникиЗначенияРассылок].ЗначениеРассылки
+  FROM [dbo].[СотрудникиЗначенияРассылок]
+  INNER JOIN [dbo].[Сотрудники] on [СотрудникиЗначенияРассылок].СотрудникUUID = [Сотрудники].UUID
+  INNER JOIN [dbo].[ФизическиеЛица] on [Сотрудники].ФизЛицоUUID = [ФизическиеЛица].UUID
+  WHERE 
+  Сотрудники.ДатаУвольнения = \u002700010101\u0027
+  AND [СотрудникиЗначенияРассылок].СистемаAD = \u0027&СистемаGUID\u0027
+  ) AS T1 
+
+group by
+    EmployeeID
+    ,СистемаAD
+    ,ПолеADДляВыгрузки) AS T2
+GROUP BY
+    EmployeeID
+    ,СистемаAD) as TempT
+    
+
+--ВЫБОРКА И СРАВНЕНИЕ 1С и AD
+
+SELECT 
     ДанныеAD.ADsPath,
     Данные1С.title,
     Данные1С.company,
@@ -166,6 +208,8 @@ dso = ПолучитьCOMОбъект("LDAP:");
     Данные1С.givenName,
     ДанныеAD.ПлощадкаSD as extensionAttribute1,
     Данные1С.department as extensionAttribute2,
+    Данные1С.extensionAttribute4 as extensionAttribute4,
+    Данные1С.extensionAttribute5 as extensionAttribute5,
     ДанныеAD.title as AD_title,
     ДанныеAD.company as AD_company,
     ДанныеAD.department as AD_department,
@@ -174,7 +218,9 @@ dso = ПолучитьCOMОбъект("LDAP:");
     ДанныеAD.sn as AD_sn,
     ДанныеAD.givenName as AD_givenName,
     ДанныеAD.extensionAttribute1 as AD_extensionAttribute1,
-    ДанныеAD.extensionAttribute2 as AD_extensionAttribute2
+    ДанныеAD.extensionAttribute2 as AD_extensionAttribute2,
+    ДанныеAD.extensionAttribute4 as AD_extensionAttribute4,
+    ДанныеAD.extensionAttribute5 as AD_extensionAttribute5
 FROM (SELECT        
     CAST(Организации.Наименование AS nvarchar(64)) AS company, 
     CAST(isNULL(SD_МеппингПодрзделенийДляSD.НовоеПодразделение,isnull(Подразделения.Наименование,\u0027\u0027)) AS nvarchar(64)) AS department, 
@@ -188,17 +234,21 @@ FROM (SELECT
     Сотрудники.ВидЗанятости, 
     Сотрудники.ВидЗанятостиКод, 
     Сотрудники.ДатаПриемаНаРаботу, 
-    Сотрудники.ДатаУвольнения
-
+    Сотрудники.ДатаУвольнения,
+    ISNULL(GroupSotr.extensionAttribute4,\u0027\u0027) as extensionAttribute4,
+    ISNULL(GroupSotr.extensionAttribute5,\u0027\u0027) as extensionAttribute5
 FROM
     dbo.ФизическиеЛица AS ФизическиеЛица 
         INNER JOIN ЛучшиеСотрудникиПоEmployeeID AS ЛучшиеСотрудникиПоEmployeeID ON      ЛучшиеСотрудникиПоEmployeeID.ФизлицоUUID = ФизическиеЛица.UUID
         INNER JOIN dbo.Сотрудники AS Сотрудники ON ЛучшиеСотрудникиПоEmployeeID.СотрудникUUID = Сотрудники.UUID 
         INNER JOIN dbo.Организации AS Организации ON Организации.UUID = Сотрудники.ОрганизацияUUID        
         LEFT OUTER JOIN dbo.Подразделения AS Подразделения ON Подразделения.UUID = Сотрудники.ПодразделениеUUID
-		LEFT OUTER JOIN dbo.SD_МеппингПодрзделенийДляSD AS SD_МеппингПодрзделенийДляSD 
-			ON SD_МеппингПодрзделенийДляSD.Подразделение = Подразделения.Наименование 
-			AND SD_МеппингПодрзделенийДляSD.Организация = Организации.Наименование
+        LEFT OUTER JOIN dbo.SD_МеппингПодрзделенийДляSD AS SD_МеппингПодрзделенийДляSD 
+            ON SD_МеппингПодрзделенийДляSD.Подразделение = Подразделения.Наименование 
+            AND SD_МеппингПодрзделенийДляSD.Организация = Организации.Наименование
+        LEFT JOIN #TemTableDWH_GroupSotr as GroupSotr ON ФизическиеЛица.EmployeeID = GroupSotr.EmployeeID
+             
+             
 
 where ФизическиеЛица.EmployeeID is not null
     AND ФизическиеЛица.EmployeeID <> \u0027\u0027
@@ -217,6 +267,8 @@ INNER JOIN (Select
     isNULL(AD.givenName,\u0027\u0027) as givenName,
     isNULL(AD.extensionAttribute1,\u0027\u0027) as extensionAttribute1,
     isNULL(AD.extensionAttribute2,\u0027\u0027) as extensionAttribute2,
+    isNULL(AD.extensionAttribute4,\u0027\u0027) as extensionAttribute4,
+    isNULL(AD.extensionAttribute5,\u0027\u0027) as extensionAttribute5,
     isNULL(AD_PrefixFor1C.ПлощадкаSD,\u0027\u0027) as ПлощадкаSD 
     from AD LEFT JOIN AD_PrefixFor1C 
         ON AD.Система = AD_PrefixFor1C.СистемаAD
@@ -235,7 +287,15 @@ WHERE
     or ДанныеAD.sn <> Данные1С.sn
     or ДанныеAD.givenName <> Данные1С.givenName
     or ДанныеAD.extensionAttribute1 <> ДанныеAD.ПлощадкаSD
-    or ДанныеAD.extensionAttribute2 <> Данные1С.department)',
+    or ДанныеAD.extensionAttribute2 <> Данные1С.department
+    or ДанныеAD.extensionAttribute4 <> Данные1С.extensionAttribute4
+    or ДанныеAD.extensionAttribute5 <> Данные1С.extensionAttribute5
+    )
+
+--ЗАВЕРШЕНИЕ
+DROP TABLE #TemTableDWH_GroupSotr
+
+set nocount off',
      'Комментарий': ''
     },
     {
